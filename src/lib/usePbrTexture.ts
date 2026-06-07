@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import * as THREE from 'three'
 
 // PBR slot → Poly Haven filename suffix
@@ -15,13 +15,18 @@ type PbrSlots = { [K in SlotKey]: THREE.Texture | null }
 const RES = '1k'
 
 const textureCache = new Map<string, THREE.Texture | null>()
-const texturePromiseCache = new Map<string, Promise<THREE.Texture | null>>()
-const bundleCache = new Map<string, PbrSlots>()
-const bundlePromiseCache = new Map<string, Promise<PbrSlots>>()
+const promiseCache = new Map<string, Promise<THREE.Texture | null>>()
+
+const EMPTY_SLOTS: PbrSlots = {
+  map: null,
+  normalMap: null,
+  roughnessMap: null,
+  aoMap: null,
+}
 
 function loadTextureSafe(url: string): Promise<THREE.Texture | null> {
   if (textureCache.has(url)) return Promise.resolve(textureCache.get(url) ?? null)
-  const existing = texturePromiseCache.get(url)
+  const existing = promiseCache.get(url)
   if (existing) return existing
   const loader = new THREE.TextureLoader()
   const p = new Promise<THREE.Texture | null>((resolve) => {
@@ -37,39 +42,35 @@ function loadTextureSafe(url: string): Promise<THREE.Texture | null> {
       },
     )
   })
-  texturePromiseCache.set(url, p)
+  promiseCache.set(url, p)
   return p
 }
 
 type Opts = { repeat?: [number, number]; anisotropy?: number }
 
 /**
- * Loads a Poly Haven-style PBR set as {map, normalMap, roughnessMap, aoMap}.
- * Suspends until every file has either loaded or failed; failures resolve to
- * null instead of rejecting, so a missing AO map doesn't break the material.
+ * Loads a Poly Haven-style PBR set without suspending. Returns empty slots
+ * synchronously so the mesh always mounts; updates via setState once textures
+ * arrive. Missing maps remain null and the material falls back to its color
+ * tint — a broken/missing asset can't blank out the scene.
  */
 export function usePbrTexture(baseDir: string, slug: string, opts: Opts = {}): PbrSlots {
-  const bundleKey = `${baseDir}|${slug}|${RES}`
+  const [slots, setSlots] = useState<PbrSlots>(EMPTY_SLOTS)
 
-  if (!bundleCache.has(bundleKey)) {
-    let bp = bundlePromiseCache.get(bundleKey)
-    if (!bp) {
-      const entries = Object.entries(SUFFIXES) as Array<[SlotKey, string]>
-      const urls = entries.map(([slot, suffix]) =>
-        ({ slot, url: `${baseDir}/${slug}_${suffix}_${RES}.jpg` }),
-      )
-      bp = Promise.all(urls.map(u => loadTextureSafe(u.url))).then((results) => {
-        const out: PbrSlots = { map: null, normalMap: null, roughnessMap: null, aoMap: null }
-        urls.forEach(({ slot }, i) => { out[slot] = results[i] })
-        bundleCache.set(bundleKey, out)
-        return out
-      })
-      bundlePromiseCache.set(bundleKey, bp)
-    }
-    throw bp
-  }
-
-  const slots = bundleCache.get(bundleKey)!
+  useEffect(() => {
+    let cancelled = false
+    const entries = Object.entries(SUFFIXES) as Array<[SlotKey, string]>
+    const urls = entries.map(([slot, suffix]) =>
+      ({ slot, url: `${baseDir}/${slug}_${suffix}_${RES}.jpg` }),
+    )
+    Promise.all(urls.map(u => loadTextureSafe(u.url))).then((results) => {
+      if (cancelled) return
+      const next: PbrSlots = { map: null, normalMap: null, roughnessMap: null, aoMap: null }
+      urls.forEach(({ slot }, i) => { next[slot] = results[i] })
+      setSlots(next)
+    })
+    return () => { cancelled = true }
+  }, [baseDir, slug])
 
   useEffect(() => {
     const aniso = opts.anisotropy ?? 4

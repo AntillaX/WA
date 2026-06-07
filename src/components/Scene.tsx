@@ -27,7 +27,9 @@ export function Scene({ config, input }: Props) {
       <color attach="background" args={[fogColor.getHex()]} />
       <fog attach="fog" args={[fogColor.getHex(), 9, 32]} />
 
-      {/* HDRI environment — isolated so a missing file doesn't kill the scene */}
+      {/* HDRI environment — drei's <Environment> uses Suspense internally;
+          a SilentBoundary catches any missing-file error so the rest of the
+          scene survives. */}
       <SilentBoundary label={`HDRI ${config.hdri}`}>
         <Suspense fallback={null}>
           <Environment
@@ -59,22 +61,15 @@ export function Scene({ config, input }: Props) {
       {/* Cool sky-fill for the side opposite the sun */}
       <hemisphereLight args={['#3a4258', '#1a1c20', 0.18]} />
 
-      {/* Geometry — its own suspense so HDRI load delays don't block it */}
-      <SilentBoundary label="ground">
-        <Suspense fallback={null}>
-          <Ground
-            slug={config.ground}
-            width={ENCLOSURE.width + 24}
-            depth={ENCLOSURE.depth + 40}
-          />
-        </Suspense>
-      </SilentBoundary>
-
-      <SilentBoundary label="hedges">
-        <Suspense fallback={null}>
-          <Hedges slug={config.hedge} {...ENCLOSURE} />
-        </Suspense>
-      </SilentBoundary>
+      {/* Ground and hedges no longer suspend on texture load — they mount
+          immediately with their color tints, then receive textures as those
+          arrive. A missing PBR map degrades to flat color instead of blank. */}
+      <Ground
+        slug={config.ground}
+        width={ENCLOSURE.width + 24}
+        depth={ENCLOSURE.depth + 40}
+      />
+      <Hedges slug={config.hedge} {...ENCLOSURE} />
 
       <Player {...ENCLOSURE} input={input} />
     </>
