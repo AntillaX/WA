@@ -5,6 +5,7 @@ import { Scene } from './components/Scene'
 import { Intro } from './components/Intro'
 import { AssetSwitcher } from './components/AssetSwitcher'
 import { TouchControls } from './components/TouchControls'
+import { SilentBoundary } from './components/SilentBoundary'
 import { readConfigFromUrl, writeConfigToUrl, type AssetConfig, type AssetKind } from './config'
 import { createRenderer, getRendererInfo } from './lib/createRenderer'
 import { isTouchDevice, useInput } from './lib/useInput'
@@ -73,9 +74,11 @@ export default function App() {
   useEffect(() => {
     if (!ready || !rootRef.current) return
     rootRef.current.render(
-      <Suspense fallback={null}>
-        <Scene config={config} input={input} />
-      </Suspense>,
+      <SilentBoundary label="scene-root">
+        <Suspense fallback={null}>
+          <Scene config={config} input={input} />
+        </Suspense>
+      </SilentBoundary>,
     )
   }, [ready, config, input])
 

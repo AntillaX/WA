@@ -1,6 +1,6 @@
 import { Suspense } from 'react'
 import { Environment } from '@react-three/drei'
-import * as THREE from 'three'
+import { Atmosphere } from './Atmosphere'
 import { Ground } from './Ground'
 import { Hedges } from './Hedges'
 import { Player } from './Player'
@@ -20,12 +20,9 @@ export const ENCLOSURE = {
 type Props = { config: AssetConfig; input: InputState }
 
 export function Scene({ config, input }: Props) {
-  const fogColor = new THREE.Color('#0c1015')
-
   return (
     <>
-      <color attach="background" args={[fogColor.getHex()]} />
-      <fog attach="fog" args={[fogColor.getHex(), 9, 32]} />
+      <Atmosphere color="#0c1015" fogNear={9} fogFar={32} />
 
       {/* HDRI environment — drei's <Environment> uses Suspense internally;
           a SilentBoundary catches any missing-file error so the rest of the
@@ -61,9 +58,6 @@ export function Scene({ config, input }: Props) {
       {/* Cool sky-fill for the side opposite the sun */}
       <hemisphereLight args={['#3a4258', '#1a1c20', 0.18]} />
 
-      {/* Ground and hedges no longer suspend on texture load — they mount
-          immediately with their color tints, then receive textures as those
-          arrive. A missing PBR map degrades to flat color instead of blank. */}
       <Ground
         slug={config.ground}
         width={ENCLOSURE.width + 24}

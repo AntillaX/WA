@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useEffect } from 'react'
 import * as THREE from 'three'
 import { usePbrTexture } from '../lib/usePbrTexture'
 
@@ -15,15 +15,21 @@ export function Hedges({ slug, width, depth, wallHeight, wallThickness, gap }: P
   const tex = usePbrTexture('/assets/textures', slug, { repeat: [4, 2] })
 
   const material = useMemo(() => new THREE.MeshStandardMaterial({
-    map: tex.map ?? undefined,
-    normalMap: tex.normalMap ?? undefined,
-    roughnessMap: tex.roughnessMap ?? undefined,
-    aoMap: tex.aoMap ?? undefined,
+    color: new THREE.Color('#5e6b4a'),
     roughness: 0.95,
     metalness: 0,
-    color: new THREE.Color('#5e6b4a'),
     normalScale: new THREE.Vector2(1.1, 1.1),
-  }), [tex])
+  }), [])
+
+  useEffect(() => {
+    material.map = tex.map
+    material.normalMap = tex.normalMap
+    material.roughnessMap = tex.roughnessMap
+    material.aoMap = tex.aoMap
+    material.needsUpdate = true
+  }, [material, tex.map, tex.normalMap, tex.roughnessMap, tex.aoMap])
+
+  useEffect(() => () => material.dispose(), [material])
 
   const sideHalf = (width - gap) / 2
 
