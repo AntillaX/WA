@@ -1,0 +1,17 @@
+node_modules
+dist
+.DS_Store
+*.log
+.vite
+
+# TS/Vite build leftovers
+*.tsbuildinfo
+vite.config.js
+vite.config.d.ts
+
+# Asset binaries — downloaded via `npm run assets`, not committed
+public/assets/textures/*.jpg
+public/assets/textures/*.png
+public/assets/textures/*.exr
+public/assets/hdri/*.hdr
+public/assets/hdri/*.exr
