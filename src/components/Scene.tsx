@@ -1,0 +1,71 @@
+import { Suspense } from 'react'
+import { Environment } from '@react-three/drei'
+import { Atmosphere } from './Atmosphere'
+import { Ground } from './Ground'
+import { Hedges } from './Hedges'
+import { Player } from './Player'
+import { SilentBoundary } from './SilentBoundary'
+import type { AssetConfig } from '../config'
+import type { InputState } from '../lib/useInput'
+
+export const ENCLOSURE = {
+  width: 24,
+  depth: 20,
+  wallHeight: 4.5,
+  wallThickness: 0.5,
+  gap: 3,
+  backLimit: 8,
+}
+
+type Props = { config: AssetConfig; input: InputState }
+
+export function Scene({ config, input }: Props) {
+  return (
+    <>
+      <Atmosphere color="#0c1015" fogNear={9} fogFar={32} />
+
+      {/* HDRI environment — drei's <Environment> uses Suspense internally;
+          a SilentBoundary catches any missing-file error so the rest of the
+          scene survives. */}
+      <SilentBoundary label={`HDRI ${config.hdri}`}>
+        <Suspense fallback={null}>
+          <Environment
+            files={`/assets/hdri/${config.hdri}_1k.hdr`}
+            background={false}
+            environmentIntensity={0.35}
+          />
+        </Suspense>
+      </SilentBoundary>
+
+      {/* Late-evening warm sun, low and from one side */}
+      <directionalLight
+        position={[-7, 4.5, -8]}
+        intensity={2.0}
+        color="#ffa766"
+        castShadow
+        shadow-mapSize-width={2048}
+        shadow-mapSize-height={2048}
+        shadow-camera-left={-16}
+        shadow-camera-right={16}
+        shadow-camera-top={16}
+        shadow-camera-bottom={-16}
+        shadow-camera-near={0.5}
+        shadow-camera-far={45}
+        shadow-bias={-0.0005}
+        shadow-normalBias={0.04}
+      />
+
+      {/* Cool sky-fill for the side opposite the sun */}
+      <hemisphereLight args={['#3a4258', '#1a1c20', 0.18]} />
+
+      <Ground
+        slug={config.ground}
+        width={ENCLOSURE.width + 24}
+        depth={ENCLOSURE.depth + 40}
+      />
+      <Hedges slug={config.hedge} {...ENCLOSURE} />
+
+      <Player {...ENCLOSURE} input={input} />
+    </>
+  )
+}
