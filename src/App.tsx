@@ -1,5 +1,5 @@
 import { Suspense, useEffect, useRef, useState } from 'react'
-import { createRoot, events, type ReconcilerRoot } from '@react-three/fiber'
+import { createRoot, events, extend, type ReconcilerRoot } from '@react-three/fiber'
 import * as THREE from 'three'
 import { Scene } from './components/Scene'
 import { Intro } from './components/Intro'
@@ -9,6 +9,12 @@ import { SilentBoundary } from './components/SilentBoundary'
 import { readConfigFromUrl, writeConfigToUrl, type AssetConfig, type AssetKind } from './config'
 import { createRenderer, getRendererInfo } from './lib/createRenderer'
 import { isTouchDevice, useInput } from './lib/useInput'
+
+// R3F's <Canvas> auto-registers every THREE.* class so JSX primitives like
+// <mesh>, <directionalLight>, <planeGeometry> resolve. We bypass <Canvas> and
+// use createRoot() directly to await the WebGPU renderer — which means we
+// have to call extend() ourselves, once, at module init.
+extend(THREE as unknown as Record<string, unknown>)
 
 export default function App() {
   const containerRef = useRef<HTMLDivElement>(null)
